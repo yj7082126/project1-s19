@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<a href="/comparing_teams" class="btn btn-info" role="button">Pick Other Teams</a>
+
+<div class="container">
+<div class="row">
+	<div class="col"></div>
+	<div class="col-12">
+		<table class="table-striped">
+			<thead>
+				<tr>
+					<th>{{team_name_1}}</th>
+					<th>Statistics</th>
+					<th>{{team_name_2}}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for stat1, attr, stat2 in data %}
+				<tr>
+					<td>{{stat1}}</td>
+					<td>{{attr}}</td>
+					<td>{{stat2}}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	<div class="col"></div>
+</div>
+</div>
+
+{% endblock content %}

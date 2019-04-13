@@ -13,26 +13,16 @@ Read about it online.
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
+from flask import Flask, request, render_template, g, redirect, Response, url_for
+import terms
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
+# Set up for the class database
 
-
-# XXX: The Database URI should be in the format of: 
-#
-#     postgresql://USER:PASSWORD@<IP_OF_POSTGRE_SQL_SERVER>/<DB_NAME>
-#
-# For example, if you had username ewu2493, password foobar, then the following line would be:
-#
-#     DATABASEURI = "postgresql://ewu2493:foobar@<IP_OF_POSTGRE_SQL_SERVER>/postgres"
-#
-# For your convenience, we already set it to the class database
-
-# Use the DB credentials you received by e-mail
-DB_USER = "YOUR_DB_USERNAME_HERE"
-DB_PASSWORD = "YOUR_DB_PASSWORD_HERE"
+DB_USER = "yk2805"
+DB_PASSWORD = "j25CnkRB8F"
 
 DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
 
@@ -81,7 +71,7 @@ def teardown_request(exception):
   except Exception as e:
     pass
 
-
+team_names = []
 #
 # @app.route is a decorator around index() that means:
 #   run index() whenever the user tries to access the "/" path using a GET request
@@ -96,6 +86,7 @@ def teardown_request(exception):
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
 #
 @app.route('/')
+@app.route('/index')
 def index():
   """
   request is a special object that Flask provides to access web request information:
@@ -161,9 +152,7 @@ def index():
 # notice that the functio name is another() rather than index()
 # the functions for each app.route needs to have different names
 #
-@app.route('/another')
-def another():
-  return render_template("anotherfile.html")
+
 
 
 # Example of adding new data to the database
@@ -181,6 +170,189 @@ def login():
     abort(401)
     this_is_never_executed()
 
+
+@app.route('/players', methods=['POST', 'GET'])
+def player_info():
+
+  # DEBUG: this is debugging code to see what request looks like
+  # print request.args
+
+  if request.method == 'POST':
+    pid = request.form.get('player_id')
+
+    attr_select_cat = {'player': ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg'], 'team': ['team']}
+    
+    attr_select_flat = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
+    
+    cmd = """
+          SELECT {0}, T.team
+          FROM player as P, team as T 
+          WHERE P.tid = T.tid AND P.pid = {1}
+          LIMIT 1;
+          """.format(", ".join(['P.' + x for x in attr_select_cat['player']]), pid)
+
+    cursor = g.conn.execute(cmd)
+    result_dict = {attr: data for attr, data in zip(attr_select_flat, cursor.fetchone())}
+    cursor.close()
+
+    general_attr = ['team', 'fullname', 'age', 'pos']
+    attr_show = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg']
+    data_show = [result_dict[x] for x in attr_show]
+    data_show_des = [terms.attr_des[x].title() for x in attr_show]
+
+    data = zip(data_show_des, data_show)
+    p_team = result_dict['team']
+    p_fullname = result_dict['fullname'].title()
+    p_pos = result_dict['pos'].upper()
+    p_age = str(result_dict['age']) + ' Year Old'
+    title = "Player Stats"
+
+    return render_template("players.html", data=data, p_team=p_team, p_fullname=p_fullname, p_pos = p_pos, p_age=p_age, title=title, teams=zip(range(1, 31), terms.teams))
+
+
+  cmd = "SELECT pid, fullname FROM player ORDER BY pid;"
+  cursor = g.conn.execute(cmd)
+
+
+  names = []
+  for res in cursor:
+    names.append((res[0], res[1]))
+  cursor.close()
+
+  undup_names = []
+  for ind in range(len(names)-1):
+    if names[ind + 1][1] != names[ind][1]:
+      undup_names.append(names[ind])
+
+  return render_template("player_request.html", player_names = undup_names)
+
+@app.route('/teams', methods=['POST', 'GET'])
+def team_info():
+  
+  if request.method == 'POST':
+    attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+
+    tid = request.form.get('team_name')
+    cmd = """
+          SELECT {0} 
+          FROM team
+          WHERE tid = {1}
+          LIMIT 1;
+          """.format(", ".join(attr_select), tid)
+
+    cursor = g.conn.execute(cmd)
+
+    result = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    cursor.close()
+
+    attr_show = ['gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+    data = zip([terms.attr_des[x] for x in attr_show], [result[x] for x in attr_show])
+    
+    t_team = result['team']
+    t_conf = result['conf']
+    t_division = result['division']
+
+    return render_template("teams.html", data=data, t_team=t_team, t_conf=t_conf, t_division=t_division, teams=zip(range(1, 31), terms.teams))
+
+  return render_template("teams_request.html", teams=zip(range(1, 31), terms.teams))
+
+
+@app.route("/comparing_players", methods=['POST', 'GET'])
+def comparing_players():
+  
+
+  if request.method == 'POST':
+    pid1 = request.form.get('player_name1')
+    pid2 = request.form.get('player_name2')
+
+    attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
+    
+    cmd1 = """
+          SELECT {0}, T.team
+          FROM player as P, team as T 
+          WHERE P.tid = T.tid AND P.pid = {1}
+          LIMIT 1;
+          """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid1)
+
+    cmd2 = """
+          SELECT {0}, T.team
+          FROM player as P, team as T 
+          WHERE P.tid = T.tid AND P.pid = {1}
+          LIMIT 1;
+          """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid2)
+
+    cursor = g.conn.execute(cmd1)
+    result_dict1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    cursor = g.conn.execute(cmd2)
+    result_dict2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    cursor.close()
+
+    player_name_1 = result_dict1['fullname']
+    player_name_2 = result_dict2['fullname']
+
+
+    attr_show = attr_select = ['team', 'pos', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', ]
+
+    attr_show_des = [terms.attr_des[x] for x in attr_show]
+    data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
+
+    return render_template("players_comp.html", data=data, player_name_1=player_name_1, player_name_2=player_name_2)
+
+  cmd = "SELECT pid, fullname FROM player ORDER BY pid;"
+  cursor = g.conn.execute(cmd)
+
+
+  names = []
+  for res in cursor:
+    names.append((res[0], res[1]))
+  cursor.close()
+
+  undup_names = []
+  for ind in range(len(names)-1):
+    if names[ind + 1][1] != names[ind][1]:
+      undup_names.append(names[ind])
+
+  return render_template("players_comp_request.html", player_names = undup_names)
+
+@app.route("/comparing_teams", methods=['POST', 'GET'])
+def comparing_teams():
+  if request.method == 'POST':
+    tid1 = request.form.get('team_name1')
+    tid2 = request.form.get('team_name2')
+
+    attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+
+    cmd1 = """
+          SELECT {0} 
+          FROM team
+          WHERE tid = {1}
+          LIMIT 1;
+          """.format(", ".join(attr_select), tid1)
+
+    cmd2 = """
+          SELECT {0} 
+          FROM team
+          WHERE tid = {1}
+          LIMIT 1;
+          """.format(", ".join(attr_select), tid2)    
+
+    cursor = g.conn.execute(cmd1)
+
+    result1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    cursor = g.conn.execute(cmd2)
+    result2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    cursor.close()
+
+    attr_show = ['conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+    attr_des = [terms.attr_des[x] for x in attr_show]
+    data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
+
+    team_name_1 = result1['team']
+    team_name_2 = result2['team']
+    return render_template("teams_comp.html", data=data, team_name_1 = team_name_1, team_name_2=team_name_2)
+
+
+  return render_template("teams_comp_request.html", teams=zip(range(1, 31), terms.teams))
 
 if __name__ == "__main__":
   import click
