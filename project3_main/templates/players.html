@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="container">
+	<div class="row">
+		<div class="col"></div>
+		<div class="col-8">
+			{{p_fullname}}
+		</div>
+		<div class="col"></div>
+	</div>
+	<div class="row">
+		<div class="col"></div>
+		<div class="col-8">
+			{{p_pos}} | {{p_team}}
+		</div>
+		<div class="col"></div>
+	</div>
+	<div class="row">
+		<div class="col"></div>
+		<div class="col-8">
+			{{p_age}}
+		</div>
+		<div class="col"><a href="/players" class="btn btn-info" role="button">Pick Another Player</a></div>
+	</div>
+</div>
+	
+<div class="row">
+	<div class="col"></div>
+	<div class="col">
+		<table class="table-striped">
+			<thead>
+				<tr>
+					<th>Attributes</th>
+					<th>Statistics</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for attr, stat in data %}
+				<tr>
+					<td>{{attr}}</td>
+					<td>{{stat}}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+	<div class="col"></div>
+</div>
+
+
+<!-- <div>
+{% for n in data %}
+	<div>{{n}}</div>
+{% endfor %}	
+</div> -->
+
+{% endblock content %}

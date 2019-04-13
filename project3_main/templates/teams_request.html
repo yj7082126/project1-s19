@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<form class="form-inline" method="POST">
+	<div class="form-group">
+		<div class="input-group">
+			<select name="team_name" class="selectpicker form-control">
+				{% for index, team_name in teams %}
+		  		<option value="{{index}}">{{team_name}}</option>
+		  		{% endfor %}
+			</select>
+		</div>
+		<button type="submit" class="btn btn-default">Go</button>
+	</div>
+</form>
+
+{% endblock content %}
