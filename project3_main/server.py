@@ -13,11 +13,15 @@ Read about it online.
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response, url_for
+from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 import terms
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, FavPlayerCompForm, FavTeamCompForm
+from flask_login import LoginManager, login_user, UserMixin, current_user, logout_user, login_required
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
+
+login_manager = LoginManager(app)
 
 # Set up for the class database
 
@@ -29,9 +33,9 @@ DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
 DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/w4111"
 
 
-#
+
 # This line creates a database engine that knows how to connect to the URI above
-#
+
 engine = create_engine(DATABASEURI)
 
 
@@ -42,7 +46,6 @@ engine.execute("""CREATE TABLE IF NOT EXISTS test (
   name text
 );""")
 engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
-
 
 
 @app.before_request
@@ -71,104 +74,29 @@ def teardown_request(exception):
   except Exception as e:
     pass
 
-team_names = []
-#
-# @app.route is a decorator around index() that means:
-#   run index() whenever the user tries to access the "/" path using a GET request
-#
-# If you wanted the user to go to e.g., localhost:8111/foobar/ with POST or GET then you could use
-#
-#       @app.route("/foobar/", methods=["POST", "GET"])
-#
-# PROTIP: (the trailing / in the path is important)
-# 
-# see for routing: http://flask.pocoo.org/docs/0.10/quickstart/#routing
-# see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
-#
+app.config['SECRET_KEY'] = 'df46583764fe4ce75e0ea7cc58dd2cc7'
+
 @app.route('/')
 @app.route('/index')
 def index():
-  """
-  request is a special object that Flask provides to access web request information:
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments e.g., {a:1, b:2} for http://localhost?a=1&b=2
-  See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
-  """
 
   # DEBUG: this is debugging code to see what request looks like
   print request.args
 
-
-  #
-  # example of a database query
-  #
-  cursor = g.conn.execute("SELECT name FROM test")
+  # cursor = g.conn.execute("SELECT name FROM test")
+  # names = []
+  # for result in cursor:
+  #   names.append(result['name'])  # can also be accessed using result[0]
+  # cursor.close()
+  cursor = g.conn.execute("SELECT fullname FROM player WHERE pid <> 0 ORDER BY pid;")
   names = []
   for result in cursor:
-    names.append(result['name'])  # can also be accessed using result[0]
+    names.append(result[0])
   cursor.close()
 
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be 
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #     
-  #     # creates a <div> tag for each element in data
-  #     # will print: 
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
   context = dict(data = names)
 
-
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
   return render_template("index.html", **context)
-
-#
-# This is an example of a different path.  You can see it at
-# 
-#     localhost:8111/another
-#
-# notice that the functio name is another() rather than index()
-# the functions for each app.route needs to have different names
-#
-
-
-
-# Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-  name = request.form['name']
-  print name
-  cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-  g.conn.execute(text(cmd), name1 = name, name2 = name);
-  return redirect('/')
-
-
-@app.route('/login')
-def login():
-    abort(401)
-    this_is_never_executed()
 
 
 @app.route('/players', methods=['POST', 'GET'])
@@ -257,6 +185,36 @@ def team_info():
   return render_template("teams_request.html", teams=zip(range(1, 31), terms.teams))
 
 
+def player_comp(pid1, pid2, attr_show):
+  # attributes to select in the 
+  attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
+  attr_select_str = ", ".join(['P.' + x for x in attr_select[:-1]])
+
+  cmd = """
+        SELECT {attr_select}, T.team
+        FROM player as P, team as T 
+        WHERE P.tid = T.tid AND P.pid = {pid}
+        LIMIT 1;
+        """
+  
+  cursor = g.conn.execute(cmd.format(attr_select=attr_select_str, pid=pid1))
+  result_dict1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+  cursor = g.conn.execute(cmd.format(attr_select=attr_select_str, pid=pid2))
+  result_dict2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+  cursor.close()
+
+  player_name_1 = result_dict1['fullname']
+  player_name_2 = result_dict2['fullname']
+
+  attr_show_des = [terms.attr_des[x] for x in attr_show]
+  data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
+
+  return data, player_name_1, player_name_2
+
+def team_comp():
+  pass
+
+
 @app.route("/comparing_players", methods=['POST', 'GET'])
 def comparing_players():
   
@@ -265,37 +223,38 @@ def comparing_players():
     pid1 = request.form.get('player_name1')
     pid2 = request.form.get('player_name2')
 
-    attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
+    # attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
     
-    cmd1 = """
-          SELECT {0}, T.team
-          FROM player as P, team as T 
-          WHERE P.tid = T.tid AND P.pid = {1}
-          LIMIT 1;
-          """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid1)
+    # cmd1 = """
+    #       SELECT {0}, T.team
+    #       FROM player as P, team as T 
+    #       WHERE P.tid = T.tid AND P.pid = {1}
+    #       LIMIT 1;
+    #       """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid1)
 
-    cmd2 = """
-          SELECT {0}, T.team
-          FROM player as P, team as T 
-          WHERE P.tid = T.tid AND P.pid = {1}
-          LIMIT 1;
-          """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid2)
+    # cmd2 = """
+    #       SELECT {0}, T.team
+    #       FROM player as P, team as T 
+    #       WHERE P.tid = T.tid AND P.pid = {1}
+    #       LIMIT 1;
+    #       """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid2)
 
-    cursor = g.conn.execute(cmd1)
-    result_dict1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    cursor = g.conn.execute(cmd2)
-    result_dict2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    cursor.close()
+    # cursor = g.conn.execute(cmd1)
+    # result_dict1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    # cursor = g.conn.execute(cmd2)
+    # result_dict2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    # cursor.close()
 
-    player_name_1 = result_dict1['fullname']
-    player_name_2 = result_dict2['fullname']
+    # player_name_1 = result_dict1['fullname']
+    # player_name_2 = result_dict2['fullname']
 
 
-    attr_show = attr_select = ['team', 'pos', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', ]
+    attr_show = ['team', 'pos', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', ]
 
-    attr_show_des = [terms.attr_des[x] for x in attr_show]
-    data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
+    # attr_show_des = [terms.attr_des[x] for x in attr_show]
+    # data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
 
+    data, player_name_1, player_name_2 = player_comp(pid1, pid2, attr_show)
     return render_template("players_comp.html", data=data, player_name_1=player_name_1, player_name_2=player_name_2)
 
   cmd = "SELECT pid, fullname FROM player ORDER BY pid;"
@@ -353,6 +312,155 @@ def comparing_teams():
 
 
   return render_template("teams_comp_request.html", teams=zip(range(1, 31), terms.teams))
+
+
+# =============================================================================
+# Registration and Login
+# 
+
+@login_manager.user_loader
+def load_user(user_id):
+  '''1. fetch user information through query the database
+     2. return a User object with user data '''
+
+  cursor = g.conn.execute("SELECT uid, username, password, tid, pid FROM users WHERE uid = {};".format(user_id))
+  result = cursor.fetchone()
+
+  return User(result[0], result[1], result[2], result[3], result[4])
+    
+class User(UserMixin):
+  """Creating a representation of each user"""
+  def __init__(self, id, username, password, tid, pid, active=True):
+    self.id = id
+    self.username = username
+    self.password = password 
+    self.tid = tid
+    self.pid = pid 
+    self.active = active
+    self.fav_team = self.get_fav_team()
+    self.fav_player = self.get_fav_player()
+
+  def __repr__(self):
+    return "User('{}', '{}', '{}', '{}', '{}'".format(self.id, self.username, self.password, self.tid, self.pid)
+  
+  def get_fav_team(self):
+
+    cmd = """
+          SELECT team FROM team WHERE tid = {};
+    """.format(self.tid)
+    cursor = g.conn.execute(cmd)
+    res = cursor.fetchone()
+    cursor.close()
+    if res:
+      return res[0]
+
+    return "No Favorite Team information"
+
+  def get_fav_player(self):
+
+    cmd = """
+          SELECT fullname FROM player WHERE pid = {};
+    """.format(self.pid)
+    cursor = g.conn.execute(cmd)
+    res = cursor.fetchone()
+    cursor.close()
+    print res
+    print res[0]
+    if res:
+      return res[0]
+
+    return "No Favorite Player Information"
+
+
+@app.route('/register', methods=['POST', 'GET'])
+def register():
+  form = RegistrationForm()
+  if form.validate_on_submit():
+    username = form.username.data
+    password = form.password.data
+    
+    tid = form.fav_team.data
+    pid = form.fav_player.data
+
+    cursor = g.conn.execute("SELECT MAX(uid) FROM users;")
+    uid = cursor.fetchone()[0] + 1
+    cursor = g.conn.execute("INSERT INTO users VALUES ({}, '{}', '{}', {}, {});".format(uid, username, password, tid, pid))
+    cursor.close()
+
+    flash('Account created for {}!'.format(form.username.data), 'success')
+    return redirect('/')
+  return render_template('register.html', title='Register', form=form)
+
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+  form = LoginForm()
+  if form.validate_on_submit():
+
+    cmd = """
+          SELECT uid, username, password, tid, pid
+          FROM users
+          WHERE username = '{}';
+          """.format(form.username.data)
+
+    cursor = g.conn.execute(cmd)
+    result = cursor.fetchone()
+    cursor.close()
+
+    user = User(result[0], result[1], result[2], result[3], result[4])
+    if form.password.data == result[2]:
+      # flash('You have been logged in!', 'success')
+      login_user(user, remember=form.remember.data)
+      return redirect('/')
+    else:
+      flash('Login Unsuccesful. Username or Password is incorrect.', 'danger')
+
+  return render_template('login.html', title='Login', form=form)
+    
+@app.route('/logout')
+def logout():
+  logout_user()
+  return redirect(url_for('index'))
+
+@app.route('/account', methods=['POST', 'GET'])
+@login_required
+def account():
+  
+  form = UpdateAccountForm()
+  if form.validate_on_submit():
+    new_username = form.username.data
+    new_tid = form.fav_team.data
+    new_pid = form.fav_player.data
+
+    cmd = """
+          UPDATE users
+          SET username = '{username}', tid = {tid}, pid = {pid}
+          WHERE uid = {uid};
+    """.format(username = new_username,
+              tid = new_tid,
+              pid = new_pid,
+              uid = current_user.id)
+    
+    cursor = g.conn.execute(cmd)
+    cursor.close()
+
+    flash('your account has been updated!', 'success')
+  elif request.method == 'GET':
+    form.username.data = current_user.username
+    form.fav_team.data = current_user.tid
+    form.fav_player.data = current_user.pid
+  return render_template("account.html", 
+                          title='Account', form=form)
+
+
+@app.route('/fav_player_comp', methods=['POST', 'GET'])
+@login_required
+def fav_player_comp():
+  form = FavPlayerCompForm()
+
+  if form.validate_on_submit():
+    pass
+  return render_template("fav_player_com_request.html", form=form)
+
 
 if __name__ == "__main__":
   import click
