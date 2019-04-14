@@ -74,6 +74,14 @@ class PlayerCompForm(FlaskForm):
 	submit = SubmitField('Compare!')
 
 
+class TeamCompForm(FlaskForm):
+
+	team1 = SelectField('First Team', choices=team_choices, coerce=int)
+	team2 = SelectField('Second Team', choices=team_choices, coerce=int)
+
+	submit = SubmitField('Compare!')
+
+
 class FavPlayerCompForm(FlaskForm):
 	"""docstring for FavPlayerCompForm"""
 

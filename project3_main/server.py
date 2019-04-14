@@ -15,7 +15,7 @@ from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 import terms
-from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, FavPlayerCompForm, FavTeamCompForm
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm
 from flask_login import LoginManager, login_user, UserMixin, current_user, logout_user, login_required
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -232,6 +232,36 @@ def team_comp(tid1, tid2, attr_show=None):
   # attributes to select in database query
   attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
 
+  attr_select_str = ", ".join(attr_select)
+
+  attr_show_default = ['conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+
+  if attr_show is None:
+    attr_show = attr_show_default
+
+  cmd = """
+        SELECT {0} 
+        FROM team
+        WHERE tid = {1}
+        LIMIT 1;
+        """
+  cursor = g.conn.execute(cmd.format(attr_select_str, tid1))
+
+  result1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+
+  cursor = g.conn.execute(cmd.format(attr_select_str, tid2))
+
+  result2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+  cursor.close()
+
+  attr_des = [terms.attr_des[x] for x in attr_show]
+  data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
+
+  team_name_1 = result1['team']
+  team_name_2 = result2['team']
+
+  return data, team_name_1, team_name_2
+
 @app.route("/comparing_teams", methods=['POST', 'GET'])
 def comparing_teams():
   if request.method == 'POST':
@@ -240,33 +270,35 @@ def comparing_teams():
 
     # attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
 
-    cmd1 = """
-          SELECT {0} 
-          FROM team
-          WHERE tid = {1}
-          LIMIT 1;
-          """.format(", ".join(attr_select), tid1)
+    # cmd1 = """
+    #       SELECT {0} 
+    #       FROM team
+    #       WHERE tid = {1}
+    #       LIMIT 1;
+    #       """.format(", ".join(attr_select), tid1)
 
-    cmd2 = """
-          SELECT {0} 
-          FROM team
-          WHERE tid = {1}
-          LIMIT 1;
-          """.format(", ".join(attr_select), tid2)    
+    # cmd2 = """
+    #       SELECT {0} 
+    #       FROM team
+    #       WHERE tid = {1}
+    #       LIMIT 1;
+    #       """.format(", ".join(attr_select), tid2)    
 
-    cursor = g.conn.execute(cmd1)
+    # cursor = g.conn.execute(cmd1)
 
-    result1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    cursor = g.conn.execute(cmd2)
-    result2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    cursor.close()
+    # result1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    # cursor = g.conn.execute(cmd2)
+    # result2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+    # cursor.close()
 
-    attr_show = ['conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
-    attr_des = [terms.attr_des[x] for x in attr_show]
-    data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
+    # attr_show = ['conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+    # attr_des = [terms.attr_des[x] for x in attr_show]
+    # data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
 
-    team_name_1 = result1['team']
-    team_name_2 = result2['team']
+    # team_name_1 = result1['team']
+    # team_name_2 = result2['team']
+
+    data, team_name_1, team_name_2 = team_comp(tid1, tid2)
     return render_template("teams_comp.html", data=data, team_name_1 = team_name_1, team_name_2=team_name_2)
 
 
