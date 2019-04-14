@@ -264,45 +264,16 @@ def team_comp(tid1, tid2, attr_show=None):
 
 @app.route("/comparing_teams", methods=['POST', 'GET'])
 def comparing_teams():
-  if request.method == 'POST':
-    tid1 = request.form.get('team_name1')
-    tid2 = request.form.get('team_name2')
+  form = TeamCompForm()
 
-    # attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
-
-    # cmd1 = """
-    #       SELECT {0} 
-    #       FROM team
-    #       WHERE tid = {1}
-    #       LIMIT 1;
-    #       """.format(", ".join(attr_select), tid1)
-
-    # cmd2 = """
-    #       SELECT {0} 
-    #       FROM team
-    #       WHERE tid = {1}
-    #       LIMIT 1;
-    #       """.format(", ".join(attr_select), tid2)    
-
-    # cursor = g.conn.execute(cmd1)
-
-    # result1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    # cursor = g.conn.execute(cmd2)
-    # result2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    # cursor.close()
-
-    # attr_show = ['conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
-    # attr_des = [terms.attr_des[x] for x in attr_show]
-    # data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
-
-    # team_name_1 = result1['team']
-    # team_name_2 = result2['team']
+  if form.validate_on_submit():
+    tid1 = form.team1.data
+    tid2 = form.team2.data
 
     data, team_name_1, team_name_2 = team_comp(tid1, tid2)
     return render_template("teams_comp.html", data=data, team_name_1 = team_name_1, team_name_2=team_name_2)
 
-
-  return render_template("teams_comp_request.html", teams=zip(range(1, 31), terms.teams))
+  return render_template("team_comp_request.html", form=form, title="Comparing Teams")
 
 
 # =============================================================================

@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="content-section">
+	<form method="POST" action="">
+		{{ form.hidden_tag() }}
+		<fieldset class="form-group">
+			<legend class="border-bottom mb-4">
+					Comparing Teams!
+			</legend>
+			<div class="form-group">
+				{{ form.team1.label(class="form-control-label")}}
+				{% if form.team1.errors %}
+					{{ form.team1(class="form-control form-control-lg is-invalid")}}
+					<div class="invalid-feedback">
+						{% for error in form.team1.errors %}
+							<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% else %}
+					{{ form.team1(class="form-control form-control-lg")}}
+				{% endif %}
+			</div>
+			<div class="form-group">
+				{{ form.team2.label(class="form-control-label")}}
+				{% if form.team2.errors %}
+					{{ form.team2(class="form-control form-control-lg is-invalid")}}
+					<div class="invalid-feedback">
+						{% for error in form.team2.errors %}
+							<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% else %}
+					{{ form.team2(class="form-control form-control-lg")}}
+				{% endif %}
+			</div>
+		</fieldset>
+		<div class="form-group">
+			{{ form.submit(class="btn btn-outline-info") }}
+		</div>
+	</form>
+</div>
+
+{% endblock content %}
