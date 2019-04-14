@@ -104,7 +104,7 @@ def player_info_request(pid, attr_show=None):
 
   attr_select_str = ", ".join(["P."+x for x in attr_select[:-1]])
 
-  attr_show_default = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg']
+  attr_show_default = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg', 'usg', 'p2', 'pa2', 'p3', 'pa3', 'ft', 'fta', 'spg', 'bpg', 'ortg', 'drtg', 'trb', 'vi', 'tor']
 
   if attr_show is None:
     attr_show = attr_show_default
@@ -126,7 +126,7 @@ def player_info_request(pid, attr_show=None):
   data_show_des = [terms.attr_des[x].title() for x in attr_show]
 
   
-  data = zip(data_show_des, data_show)
+  data = zip(attr_show, data_show_des, data_show)
   p_team = result_dict['team']
   p_fullname = result_dict['fullname'].title()
   p_pos = result_dict['pos'].upper()
@@ -172,7 +172,7 @@ def team_info_request(tid, attr_show=None):
   cursor.close()
 
   
-  data = zip([terms.attr_des[x] for x in attr_show], [result[x] for x in attr_show])
+  data = zip([terms.attr_des[x] for x in attr_show], attr_show, [result[x] for x in attr_show])
     
   t_team = result['team']
   t_conf = result['conf']
@@ -223,7 +223,7 @@ def player_comp(pid1, pid2, attr_show=None):
   player_name_2 = result_dict2['fullname']
 
   attr_show_des = [terms.attr_des[x] for x in attr_show]
-  data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
+  data = zip([result_dict1[x] for x in attr_show], attr_show_des, attr_show, [result_dict2[x] for x in attr_show])
 
   return data, player_name_1, player_name_2
 
@@ -266,7 +266,7 @@ def team_comp(tid1, tid2, attr_show=None):
   cursor.close()
 
   attr_des = [terms.attr_des[x] for x in attr_show]
-  data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
+  data = zip([result1[x] for x in attr_show], attr_des, attr_show, [result2[x] for x in attr_show])
 
   team_name_1 = result1['team']
   team_name_2 = result2['team']
@@ -361,7 +361,7 @@ def register():
     cursor.close()
 
     flash('Account created for {}!'.format(form.username.data), 'success')
-    return redirect('/')
+    return redirect("{{url_for('login')}}")
   return render_template('register.html', title='Register', form=form)
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -381,9 +381,9 @@ def login():
 
     user = User(result[0], result[1], result[2], result[3], result[4])
     if form.password.data == result[2]:
-      # flash('You have been logged in!', 'success')
+      flash('You have been logged in!', 'success')
       login_user(user, remember=form.remember.data)
-      return redirect('/')
+      return redirect(url_for('account'))
     else:
       flash('Login Unsuccesful. Username or Password is incorrect.', 'danger')
 

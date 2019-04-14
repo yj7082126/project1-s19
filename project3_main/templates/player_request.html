@@ -1,31 +1,38 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="content-section">
-	<form method="POST" action="">
-		{{ form.hidden_tag() }}
-		<fieldset class="form-group">
-			<legend class="border-bottom mb-4">
-					Player Statistics For 2018-2019 Season
-			</legend>
-			<div class="form-group">
-				{{ form.player.label(class="form-control-label")}}
-				{% if form.player.errors %}
-					{{ form.player(class="form-control form-control-lg is-invalid")}}
-					<div class="invalid-feedback">
-						{% for error in form.player.errors %}
-							<span>{{ error }}</span>
-						{% endfor %}
+<div class="row">
+	<div class="col-md"></div>
+	<div class="col-md-6">
+		<div class="content-section">
+			<form method="POST" action="">
+				{{ form.hidden_tag() }}
+				<fieldset class="form-group">
+					<legend class="border-bottom mb-4">
+							Player Statistics For 2018-2019 Season
+					</legend>
+					<div class="form-group">
+						{{ form.player.label(class="form-control-label")}}
+						{% if form.player.errors %}
+							{{ form.player(class="form-control form-control-lg is-invalid")}}
+							<div class="invalid-feedback">
+								{% for error in form.player.errors %}
+									<span>{{ error }}</span>
+								{% endfor %}
+							</div>
+						{% else %}
+							{{ form.player(class="form-control form-control-lg")}}
+						{% endif %}
 					</div>
-				{% else %}
-					{{ form.player(class="form-control form-control-lg")}}
-				{% endif %}
-			</div>
-		</fieldset>
-		<div class="form-group">
-			{{ form.submit(class="btn btn-outline-info") }}
+				</fieldset>
+				<div class="form-group">
+					{{ form.submit(class="btn btn-outline-info") }}
+				</div>
+			</form>
 		</div>
-	</form>
+	</div>
+	<div class="col-md"></div>
 </div>
+
 
 {% endblock content %}

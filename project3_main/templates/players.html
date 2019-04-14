@@ -1,58 +1,42 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="container">
-	<div class="row">
-		<div class="col"></div>
-		<div class="col-8">
-			{{p_fullname}}
-		</div>
-		<div class="col"></div>
-	</div>
-	<div class="row">
-		<div class="col"></div>
-		<div class="col-8">
-			{{p_pos}} | {{p_team}}
-		</div>
-		<div class="col"></div>
-	</div>
-	<div class="row">
-		<div class="col"></div>
-		<div class="col-8">
-			{{p_age}}
-		</div>
-		<div class="col"><a href="/players" class="btn btn-info" role="button">Pick Another Player</a></div>
-	</div>
-</div>
-	
 <div class="row">
-	<div class="col"></div>
-	<div class="col">
-		<table class="table-striped">
+	<div class="col-md-3"></div>
+	<div class="col-md-6 text-center">
+		<div class="media">
+			<div class="media-body">
+				<h2 class="account-heading">{{p_fullname}}</h2>
+				<div>{{p_pos}} | {{p_team}}</div>
+				<div>{{p_age}}</div>
+			</div>
+
+		</div>
+	</div>
+	<div class="col-md-3 text-center"><br><a href="{{url_for('player_info')}}" class="btn btn-info" role="button">Pick Another Player</a></div>
+</div>
+
+<div class="row mt-5">
+	<div class="col-md-3"></div>
+	<div class="col-md-6 text-center pl-3 pr-3">
+		<table class="table-striped table-hover table-responsive table-2">
 			<thead>
 				<tr>
-					<th>Attributes</th>
-					<th>Statistics</th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;">Attributes</th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;">Statistics</th>
 				</tr>
 			</thead>
 			<tbody>
-				{% for attr, stat in data %}
+				{% for attr, attr_des, stat in data %}
 				<tr>
-					<td>{{attr}}</td>
+					<td data-toggle="tooltip" data-placement="top" title="{{attr_des}}">{{attr}}</td>
 					<td>{{stat}}</td>
 				</tr>
 				{% endfor %}
 			</tbody>
 		</table>
 	</div>
-	<div class="col"></div>
+	<div class="col-md-3"></div>
 </div>
-
-
-<!-- <div>
-{% for n in data %}
-	<div>{{n}}</div>
-{% endfor %}	
-</div> -->
 
 {% endblock content %}
