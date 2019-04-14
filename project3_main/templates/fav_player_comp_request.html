@@ -6,19 +6,23 @@
 		{{ form.hidden_tag() }}
 		<fieldset class="form-group">
 			<legend class="border-bottom mb-4">
-					Team Statistics For 2018-2019 Season
+					Comparing Players!
 			</legend>
+			<div>
+				<label class="form-control-label">My Favorite Player</label>
+				<div class="form-control form-control-lg">{{fav_player}}</div>
+			</div>
 			<div class="form-group">
-				{{ form.team.label(class="form-control-label")}}
-				{% if form.team.errors %}
-					{{ form.team(class="form-control form-control-lg is-invalid")}}
+				{{ form.comp_player.label(class="form-control-label")}}
+				{% if form.comp_player.errors %}
+					{{ form.comp_player(class="form-control form-control-lg is-invalid")}}
 					<div class="invalid-feedback">
-						{% for error in form.team.errors %}
+						{% for error in form.comp_player.errors %}
 							<span>{{ error }}</span>
 						{% endfor %}
 					</div>
 				{% else %}
-					{{ form.team(class="form-control form-control-lg")}}
+					{{ form.comp_player(class="form-control form-control-lg")}}
 				{% endif %}
 			</div>
 		</fieldset>
