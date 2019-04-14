@@ -15,7 +15,7 @@ from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 import terms
-from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm, PlayerInfoForm, TeamInfoForm
 from flask_login import LoginManager, login_user, UserMixin, current_user, logout_user, login_required
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -98,91 +98,102 @@ def index():
 
   return render_template("index.html", **context)
 
+def player_info_request(pid, attr_show=None):
+  # attributes to select in database query
+  attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
 
-@app.route('/players', methods=['POST', 'GET'])
-def player_info():
+  attr_select_str = ", ".join(["P."+x for x in attr_select[:-1]])
 
-  # DEBUG: this is debugging code to see what request looks like
-  # print request.args
+  attr_show_default = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg']
 
-  if request.method == 'POST':
-    pid = request.form.get('player_id')
+  if attr_show is None:
+    attr_show = attr_show_default
 
-    attr_select_cat = {'player': ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg'], 'team': ['team']}
-    
-    attr_select_flat = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
-    
-    cmd = """
+  cmd = """
           SELECT {0}, T.team
           FROM player as P, team as T 
           WHERE P.tid = T.tid AND P.pid = {1}
           LIMIT 1;
-          """.format(", ".join(['P.' + x for x in attr_select_cat['player']]), pid)
+          """.format(attr_select_str, pid)
 
-    cursor = g.conn.execute(cmd)
-    result_dict = {attr: data for attr, data in zip(attr_select_flat, cursor.fetchone())}
-    cursor.close()
-
-    general_attr = ['team', 'fullname', 'age', 'pos']
-    attr_show = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg']
-    data_show = [result_dict[x] for x in attr_show]
-    data_show_des = [terms.attr_des[x].title() for x in attr_show]
-
-    data = zip(data_show_des, data_show)
-    p_team = result_dict['team']
-    p_fullname = result_dict['fullname'].title()
-    p_pos = result_dict['pos'].upper()
-    p_age = str(result_dict['age']) + ' Year Old'
-    title = "Player Stats"
-
-    return render_template("players.html", data=data, p_team=p_team, p_fullname=p_fullname, p_pos = p_pos, p_age=p_age, title=title, teams=zip(range(1, 31), terms.teams))
-
-
-  cmd = "SELECT pid, fullname FROM player ORDER BY pid;"
   cursor = g.conn.execute(cmd)
-
-
-  names = []
-  for res in cursor:
-    names.append((res[0], res[1]))
+  result_dict = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
   cursor.close()
 
-  undup_names = []
-  for ind in range(len(names)-1):
-    if names[ind + 1][1] != names[ind][1]:
-      undup_names.append(names[ind])
-
-  return render_template("player_request.html", player_names = undup_names)
-
-@app.route('/teams', methods=['POST', 'GET'])
-def team_info():
+  # general_attr = ['team', 'fullname', 'age', 'pos']
   
-  if request.method == 'POST':
-    attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+  data_show = [result_dict[x] for x in attr_show]
+  data_show_des = [terms.attr_des[x].title() for x in attr_show]
 
-    tid = request.form.get('team_name')
-    cmd = """
+  
+  data = zip(data_show_des, data_show)
+  p_team = result_dict['team']
+  p_fullname = result_dict['fullname'].title()
+  p_pos = result_dict['pos'].upper()
+  p_age = str(result_dict['age']) + ' Year Old'
+  title = "Player Stats"
+
+  context = dict(data=data, p_team=p_team, p_fullname=p_fullname, p_pos=p_pos, p_age=p_age, title=title)
+  
+  return context
+
+@app.route('/players', methods=['POST', 'GET'])
+def player_info():
+
+  form = PlayerInfoForm()
+
+  if form.validate_on_submit():
+    pid = form.player.data
+    context = player_info_request(pid)
+    return render_template("players.html", **context)
+
+  return render_template("player_request.html", form=form)
+
+def team_info_request(tid, attr_show=None):
+  # attributes to select in database query
+  attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+
+  attr_select_str = ", ".join(attr_select)
+
+  attr_show_default = ['gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+
+  if attr_show is None:
+    attr_show = attr_show_default
+
+  cmd = """
           SELECT {0} 
           FROM team
           WHERE tid = {1}
           LIMIT 1;
           """.format(", ".join(attr_select), tid)
 
-    cursor = g.conn.execute(cmd)
+  cursor = g.conn.execute(cmd)
+  result = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
+  cursor.close()
 
-    result = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    cursor.close()
-
-    attr_show = ['gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
-    data = zip([terms.attr_des[x] for x in attr_show], [result[x] for x in attr_show])
+  
+  data = zip([terms.attr_des[x] for x in attr_show], [result[x] for x in attr_show])
     
-    t_team = result['team']
-    t_conf = result['conf']
-    t_division = result['division']
+  t_team = result['team']
+  t_conf = result['conf']
+  t_division = result['division']
+  title = "Team Stats"
 
-    return render_template("teams.html", data=data, t_team=t_team, t_conf=t_conf, t_division=t_division, teams=zip(range(1, 31), terms.teams))
+  context = dict(data=data, t_team=t_team, t_conf=t_conf, t_division=t_division, title=title)
+  
+  return context
 
-  return render_template("teams_request.html", teams=zip(range(1, 31), terms.teams))
+
+@app.route('/teams', methods=['POST', 'GET'])
+def team_info():
+  form = TeamInfoForm()
+  if form.validate_on_submit():
+    tid = form.team.data
+    context = team_info_request(tid)
+
+    return render_template("teams.html", **context)
+
+  return render_template("teams_request.html", form=form)
 
 
 def player_comp(pid1, pid2, attr_show=None):
@@ -414,7 +425,7 @@ def account():
                           title='Account', form=form)
 
 
-@app.route('/fav_player_comp', methods=['POST', 'GET'])
+@app.route('/account/fav_player_comp', methods=['POST', 'GET'])
 @login_required
 def fav_player_comp():
 
@@ -428,6 +439,40 @@ def fav_player_comp():
     return render_template("players_comp.html", data=data, player_name_1=player_name_1, player_name_2=player_name_2)
 
   return render_template("fav_player_comp_request.html", fav_player=fav_player, form=form)
+
+@app.route('/account/fav_team_comp', methods=['POST', 'GET'])
+@login_required
+def fav_team_comp():
+
+  fav_team = current_user.fav_team
+  fav_team_id = current_user.tid
+  form = FavTeamCompForm()
+
+  if form.validate_on_submit():
+    tid2 = form.comp_team.data
+    data, team_name_1, team_name_2 = team_comp(fav_team_id, tid2)
+    return render_template("teams_comp.html", data=data, team_name_1=team_name_1, team_name_2=team_name_2)
+
+  return render_template("fav_team_comp_request.html", fav_team=fav_team, form=form)
+
+@app.route('/account/fav_player_info', methods=['POST', 'GET'])
+@login_required
+def fav_player_info():
+  
+  pid = current_user.pid
+  context = player_info_request(pid)
+  return render_template("players.html", **context)
+  
+
+@app.route('/account/fav_team_info', methods=['POST', 'GET'])
+@login_required
+def fav_team_info():
+  
+  tid = current_user.tid
+  context = team_info_request(tid)
+
+  return render_template("teams.html", **context)
+
 
 
 if __name__ == "__main__":

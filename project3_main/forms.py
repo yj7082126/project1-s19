@@ -66,6 +66,15 @@ class UpdateAccountForm(FlaskForm):
 			if result:
 				raise ValidationError('That username is taken. Please choose a different one.')
 
+class PlayerInfoForm(FlaskForm):
+	player = SelectField('Player', choices=player_choices, coerce=int)
+	submit = SubmitField('Get Stat!')
+
+class TeamInfoForm(FlaskForm):
+
+	team = SelectField('Team', choices=team_choices, coerce=int)
+	submit = SubmitField('Get Stat!')
+
 class PlayerCompForm(FlaskForm):
 
 	player1 = SelectField('First Player', choices=player_choices, coerce=int)

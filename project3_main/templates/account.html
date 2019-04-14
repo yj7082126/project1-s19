@@ -30,7 +30,6 @@
 				</div>
 				<div class="form-group">
 					{{ form.fav_team.label(class="form-control-label")}}
-					{# {{ form.fav_team(class="form-control form-control-lg")}} #}
 					{% if form.fav_team.errors %}
 						{{ form.fav_team(class="form-control form-control-lg is-invalid")}}
 						<div class="invalid-feedback">
@@ -44,7 +43,6 @@
 				</div>
 				<div class="form-group">
 					{{ form.fav_player.label(class="form-control-label")}}
-					{# {{ form.fav_player(class="form-control form-control-lg")}} #}
 					{% if form.fav_player.errors %}
 						{{ form.fav_player(class="form-control form-control-lg is-invalid")}}
 						<div class="invalid-feedback">
@@ -67,10 +65,19 @@
 					Analysis
 			</legend>
 			<div class="row">
-				<div class="col-sm"><a href="{{url_for('index')}}" class="btn btn-outline-info">Comparing Your Favorite Team to Another Team</a></div>
+				<label class="form-control-label")>Favorite Player:</label>
+			</div>
+			<div class="row">
+				<div class="col-sm"><a href="{{url_for('fav_player_info')}}" class="btn btn-outline-info">Your Favorite Player Stat</a></div>
 				<div class="col-sm"><a href="{{url_for('fav_player_comp')}}" class="btn btn-outline-info">Comparing Your Favorite Player to Another Player</a></div>
 			</div>
-
+			<div class="row">
+				<label class="form-control-label")>Favorite Team:</label>
+			</div>
+			<div class="row">
+				<div class="col-sm"><a href="{{url_for('fav_team_info')}}" class="btn btn-outline-info">Your Favorite Team Stat</a></div>
+				<div class="col-sm"><a href="{{url_for('fav_team_comp')}}" class="btn btn-outline-info">Comparing Your Favorite Team to Another Team</a></div>
+			</div>
 		</div>
 </div>
 <div class="col-md-3">
