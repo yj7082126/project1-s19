@@ -66,6 +66,13 @@ class UpdateAccountForm(FlaskForm):
 			if result:
 				raise ValidationError('That username is taken. Please choose a different one.')
 
+class PlayerCompForm(FlaskForm):
+
+	player1 = SelectField('First Player', choices=player_choices, coerce=int)
+	player2 = SelectField('Second Player', choices=player_choices, coerce=int)
+
+	submit = SubmitField('Compare!')
+
 
 class FavPlayerCompForm(FlaskForm):
 	"""docstring for FavPlayerCompForm"""

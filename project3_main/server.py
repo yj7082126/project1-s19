@@ -15,7 +15,7 @@ from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 import terms
-from forms import RegistrationForm, LoginForm, UpdateAccountForm, FavPlayerCompForm, FavTeamCompForm
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, FavPlayerCompForm, FavTeamCompForm
 from flask_login import LoginManager, login_user, UserMixin, current_user, logout_user, login_required
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -185,10 +185,15 @@ def team_info():
   return render_template("teams_request.html", teams=zip(range(1, 31), terms.teams))
 
 
-def player_comp(pid1, pid2, attr_show):
-  # attributes to select in the 
+def player_comp(pid1, pid2, attr_show=None):
+  # attributes to select in the query
   attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
   attr_select_str = ", ".join(['P.' + x for x in attr_select[:-1]])
+
+  attr_show_default = ['team', 'pos', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', ]
+
+  if attr_show is None:
+    attr_show = attr_show_default
 
   cmd = """
         SELECT {attr_select}, T.team
@@ -211,67 +216,21 @@ def player_comp(pid1, pid2, attr_show):
 
   return data, player_name_1, player_name_2
 
-def team_comp():
-  pass
-
-
 @app.route("/comparing_players", methods=['POST', 'GET'])
 def comparing_players():
-  
+  form = PlayerCompForm()
+  if form.validate_on_submit():
+    pid1 = form.player1.data
+    pid2 = form.player2.data
 
-  if request.method == 'POST':
-    pid1 = request.form.get('player_name1')
-    pid2 = request.form.get('player_name2')
-
-    # attr_select = ['pid', 'fullname', 'pos', 'age', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', 'team']
-    
-    # cmd1 = """
-    #       SELECT {0}, T.team
-    #       FROM player as P, team as T 
-    #       WHERE P.tid = T.tid AND P.pid = {1}
-    #       LIMIT 1;
-    #       """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid1)
-
-    # cmd2 = """
-    #       SELECT {0}, T.team
-    #       FROM player as P, team as T 
-    #       WHERE P.tid = T.tid AND P.pid = {1}
-    #       LIMIT 1;
-    #       """.format(", ".join(['P.' + x for x in attr_select[:-1]]), pid2)
-
-    # cursor = g.conn.execute(cmd1)
-    # result_dict1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    # cursor = g.conn.execute(cmd2)
-    # result_dict2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-    # cursor.close()
-
-    # player_name_1 = result_dict1['fullname']
-    # player_name_2 = result_dict2['fullname']
-
-
-    attr_show = ['team', 'pos', 'gp', 'mpg', 'min', 'usg', 'tor', 'fta', 'ft', 'pa2', 'p2', 'pa3', 'p3', 'efg', 'ts', 'ppg', 'rpg', 'trb', 'apg', 'ast', 'spg', 'bpg', 'topg', 'vi', 'ortg', 'drtg', ]
-
-    # attr_show_des = [terms.attr_des[x] for x in attr_show]
-    # data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
-
-    data, player_name_1, player_name_2 = player_comp(pid1, pid2, attr_show)
+    data, player_name_1, player_name_2 = player_comp(pid1, pid2)
     return render_template("players_comp.html", data=data, player_name_1=player_name_1, player_name_2=player_name_2)
 
-  cmd = "SELECT pid, fullname FROM player ORDER BY pid;"
-  cursor = g.conn.execute(cmd)
+  return render_template("player_comp_request.html", form=form)
 
-
-  names = []
-  for res in cursor:
-    names.append((res[0], res[1]))
-  cursor.close()
-
-  undup_names = []
-  for ind in range(len(names)-1):
-    if names[ind + 1][1] != names[ind][1]:
-      undup_names.append(names[ind])
-
-  return render_template("players_comp_request.html", player_names = undup_names)
+def team_comp(tid1, tid2, attr_show=None):
+  # attributes to select in database query
+  attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
 
 @app.route("/comparing_teams", methods=['POST', 'GET'])
 def comparing_teams():
@@ -279,7 +238,7 @@ def comparing_teams():
     tid1 = request.form.get('team_name1')
     tid2 = request.form.get('team_name2')
 
-    attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
+    # attr_select = ['tid', 'team', 'conf', 'division', 'gp', 'ptsgm', 'aptsgm', 'ptsdiff', 'pace', 'oeff', 'deff', 'ediff', 'sos', 'rsos', 'sar', 'cons', 'a4f', 'w', 'l', 'win', 'ewin', 'pwin', 'ach', 'strk']
 
     cmd1 = """
           SELECT {0} 
@@ -455,11 +414,17 @@ def account():
 @app.route('/fav_player_comp', methods=['POST', 'GET'])
 @login_required
 def fav_player_comp():
+
+  fav_player = current_user.fav_player
+  fav_player_id = current_user.pid
   form = FavPlayerCompForm()
 
   if form.validate_on_submit():
-    pass
-  return render_template("fav_player_com_request.html", form=form)
+    pid2 = form.comp_player.data
+    data, player_name_1, player_name_2 = player_comp(fav_player_id, pid2)
+    return render_template("players_comp.html", data=data, player_name_1=player_name_1, player_name_2=player_name_2)
+
+  return render_template("fav_player_comp_request.html", fav_player=fav_player, form=form)
 
 
 if __name__ == "__main__":
