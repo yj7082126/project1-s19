@@ -78,23 +78,113 @@ app.config['SECRET_KEY'] = 'df46583764fe4ce75e0ea7cc58dd2cc7'
 
 @app.route('/')
 @app.route('/index')
+@app.route('/home')
 def index():
 
   # DEBUG: this is debugging code to see what request looks like
   print request.args
 
-  # cursor = g.conn.execute("SELECT name FROM test")
-  # names = []
-  # for result in cursor:
-  #   names.append(result['name'])  # can also be accessed using result[0]
-  # cursor.close()
-  cursor = g.conn.execute("SELECT fullname FROM player WHERE pid <> 0 ORDER BY pid;")
-  names = []
-  for result in cursor:
-    names.append(result[0])
+
+
+  cursor = g.conn.execute("""SELECT fullname, ppg 
+                             FROM player 
+                             ORDER BY ppg DESC
+                             LIMIT 5;""")
+  
+  p_ppg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, rpg 
+                             FROM player 
+                             ORDER BY rpg DESC
+                             LIMIT 5;""")
+  
+  p_rpg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, apg 
+                             FROM player 
+                             ORDER BY apg DESC
+                             LIMIT 5;""")
+  
+  p_apg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, bpg 
+                             FROM player 
+                             ORDER BY bpg DESC
+                             LIMIT 5;""")
+  
+  p_bpg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, spg 
+                             FROM player 
+                             ORDER BY spg DESC
+                             LIMIT 5;""")
+  
+  p_spg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, topg 
+                             FROM player 
+                             ORDER BY topg DESC
+                             LIMIT 5;""")
+  
+  p_tpg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, ptsgm 
+                             FROM team 
+                             ORDER BY ptsgm DESC
+                             LIMIT 5;""")
+  
+  t_ppg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, aptsgm 
+                             FROM team 
+                             ORDER BY aptsgm DESC
+                             LIMIT 5;""")
+  
+  t_appg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, ptsdiff 
+                             FROM team 
+                             ORDER BY ptsdiff DESC
+                             LIMIT 5;""")
+  
+  t_ptsdiff = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, oeff 
+                             FROM team 
+                             ORDER BY oeff DESC
+                             LIMIT 5;""")
+  
+  t_oeff = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, deff 
+                             FROM team 
+                             ORDER BY deff DESC
+                             LIMIT 5;""")
+  
+  t_deff = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, pace 
+                             FROM team 
+                             ORDER BY pace DESC
+                             LIMIT 5;""")
+  
+  t_pace = [(res[0], res[1]) for res in cursor]
+
+
   cursor.close()
 
-  context = dict(data = names)
+  context = dict(p_ppg = p_ppg,
+                 p_rpg = p_rpg,
+                 p_apg = p_apg,
+                 p_bpg = p_bpg,
+                 p_spg = p_spg,
+                 p_tpg = p_tpg,
+                 t_ppg = t_ppg,
+                 t_appg = t_appg,
+                 t_ptsdiff = t_ptsdiff,
+                 t_oeff = t_oeff,
+                 t_deff = t_deff,
+                 t_pace = t_pace,)
 
   return render_template("index.html", **context)
 
@@ -104,7 +194,7 @@ def player_info_request(pid, attr_show=None):
 
   attr_select_str = ", ".join(["P."+x for x in attr_select[:-1]])
 
-  attr_show_default = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg']
+  attr_show_default = ['gp', 'mpg', 'ppg', 'rpg', 'apg', 'topg', 'usg', 'p2', 'pa2', 'p3', 'pa3', 'ft', 'fta', 'spg', 'bpg', 'ortg', 'drtg', 'trb', 'vi', 'tor']
 
   if attr_show is None:
     attr_show = attr_show_default
@@ -126,7 +216,7 @@ def player_info_request(pid, attr_show=None):
   data_show_des = [terms.attr_des[x].title() for x in attr_show]
 
   
-  data = zip(data_show_des, data_show)
+  data = zip(attr_show, data_show_des, data_show)
   p_team = result_dict['team']
   p_fullname = result_dict['fullname'].title()
   p_pos = result_dict['pos'].upper()
@@ -172,7 +262,7 @@ def team_info_request(tid, attr_show=None):
   cursor.close()
 
   
-  data = zip([terms.attr_des[x] for x in attr_show], [result[x] for x in attr_show])
+  data = zip([terms.attr_des[x] for x in attr_show], attr_show, [result[x] for x in attr_show])
     
   t_team = result['team']
   t_conf = result['conf']
@@ -223,7 +313,7 @@ def player_comp(pid1, pid2, attr_show=None):
   player_name_2 = result_dict2['fullname']
 
   attr_show_des = [terms.attr_des[x] for x in attr_show]
-  data = zip([result_dict1[x] for x in attr_show], attr_show_des, [result_dict2[x] for x in attr_show])
+  data = zip([result_dict1[x] for x in attr_show], attr_show_des, attr_show, [result_dict2[x] for x in attr_show])
 
   return data, player_name_1, player_name_2
 
@@ -266,7 +356,7 @@ def team_comp(tid1, tid2, attr_show=None):
   cursor.close()
 
   attr_des = [terms.attr_des[x] for x in attr_show]
-  data = zip([result1[x] for x in attr_show], attr_des, [result2[x] for x in attr_show])
+  data = zip([result1[x] for x in attr_show], attr_des, attr_show, [result2[x] for x in attr_show])
 
   team_name_1 = result1['team']
   team_name_2 = result2['team']
@@ -361,7 +451,7 @@ def register():
     cursor.close()
 
     flash('Account created for {}!'.format(form.username.data), 'success')
-    return redirect('/')
+    return redirect("{{url_for('login')}}")
   return render_template('register.html', title='Register', form=form)
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -381,9 +471,9 @@ def login():
 
     user = User(result[0], result[1], result[2], result[3], result[4])
     if form.password.data == result[2]:
-      # flash('You have been logged in!', 'success')
+      flash('You have been logged in!', 'success')
       login_user(user, remember=form.remember.data)
-      return redirect('/')
+      return redirect(url_for('account'))
     else:
       flash('Login Unsuccesful. Username or Password is incorrect.', 'danger')
 

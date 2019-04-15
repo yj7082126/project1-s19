@@ -1,9 +1,6 @@
 {% extends "layout.html" %}
-{% block content %}
-<div class="col-md-3">
-	
-</div>
-<div class="col-md-6">
+{% block center_content %}
+
 	<div class="media">
 		<div class="media-body">
 				<h2 class="account-heading">Welcome {{ current_user.username}}!</h2>
@@ -79,10 +76,7 @@
 				<div class="col-sm"><a href="{{url_for('fav_team_comp')}}" class="btn btn-outline-info">Comparing Your Favorite Team to Another Team</a></div>
 			</div>
 		</div>
-</div>
-<div class="col-md-3">
-	
-</div>
+
 		
 
-{% endblock content %}
+{% endblock center_content %}

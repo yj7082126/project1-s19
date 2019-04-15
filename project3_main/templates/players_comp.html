@@ -1,55 +1,45 @@
 {% extends "layout.html" %}
 {% block content %}
 
-{# <div class="container">
-	<div class="row">
-		<div class="col"></div>
-		<div class="col-8">
-			{{p_fullname}}
-		</div>
-		<div class="col"></div>
-	</div>
-	<div class="row">
-		<div class="col"></div>
-		<div class="col-8">
-			{{p_pos}} | {{p_team}}
-		</div>
-		<div class="col"></div>
-	</div>
-	<div class="row">
-		<div class="col"></div>
-		<div class="col-8">
-			{{p_age}}
-		</div>
-		<div class="col"><a href="/players" class="btn btn-info" role="button">Pick Another Player</a></div>
-	</div>
-</div> #}
 
-<a href="/comparing_players" class="btn btn-info" role="button">Pick Other Players</a>
-	
 <div class="row">
-	<div class="col"></div>
-	<div class="col">
-		<table class="table-striped">
+	<div class="col-md-3"></div>
+	<div class="col-md-6 text-center">
+		<div class="media">
+			<div class="media-body">
+				<h2 class="account-heading">Comparing Players!</h2>
+			</div>
+
+		</div>
+	</div>
+	<div class="col-md-3 text-center"><br><a href="/comparing_players" class="btn btn-info" role="button">Pick Other Players</a></div>
+</div>
+
+
+	
+<div class="row mt-5">
+	<div class="col-md"></div>
+	<div class="col-md-8 text-center">
+		<table class="table-striped table-hover table-responsive">
 			<thead>
 				<tr>
-					<th>{{player_name_1}}</th>
-					<th>Attributes</th>
-					<th>{{player_name_2}}</th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;">{{player_name_1}}</th>
+					<th scope="col" style="width: 16.66%; font-size: 20px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;">{{player_name_2}}</th>
 				</tr>
 			</thead>
 			<tbody>
-				{% for stat1, attr, stat2 in data %}
+				{% for stat1, attr_des, attr, stat2 in data %}
 				<tr>
 					<td>{{stat1}}</td>
-					<td>{{attr}}</td>
+					<th scope="row" data-toggle="tooltip" data-placement="top" title="{{attr_des}}">{{attr}}</th>
 					<td>{{stat2}}</td>
 				</tr>
 				{% endfor %}
 			</tbody>
 		</table>
 	</div>
-	<div class="col"></div>
+	<div class="col-md"></div>
 </div>
 
 {% endblock content %}
