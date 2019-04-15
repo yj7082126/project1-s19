@@ -78,23 +78,113 @@ app.config['SECRET_KEY'] = 'df46583764fe4ce75e0ea7cc58dd2cc7'
 
 @app.route('/')
 @app.route('/index')
+@app.route('/home')
 def index():
 
   # DEBUG: this is debugging code to see what request looks like
   print request.args
 
-  # cursor = g.conn.execute("SELECT name FROM test")
-  # names = []
-  # for result in cursor:
-  #   names.append(result['name'])  # can also be accessed using result[0]
-  # cursor.close()
-  cursor = g.conn.execute("SELECT fullname FROM player WHERE pid <> 0 ORDER BY pid;")
-  names = []
-  for result in cursor:
-    names.append(result[0])
+
+
+  cursor = g.conn.execute("""SELECT fullname, ppg 
+                             FROM player 
+                             ORDER BY ppg DESC
+                             LIMIT 5;""")
+  
+  p_ppg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, rpg 
+                             FROM player 
+                             ORDER BY rpg DESC
+                             LIMIT 5;""")
+  
+  p_rpg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, apg 
+                             FROM player 
+                             ORDER BY apg DESC
+                             LIMIT 5;""")
+  
+  p_apg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, bpg 
+                             FROM player 
+                             ORDER BY bpg DESC
+                             LIMIT 5;""")
+  
+  p_bpg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, spg 
+                             FROM player 
+                             ORDER BY spg DESC
+                             LIMIT 5;""")
+  
+  p_spg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT fullname, topg 
+                             FROM player 
+                             ORDER BY topg DESC
+                             LIMIT 5;""")
+  
+  p_tpg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, ptsgm 
+                             FROM team 
+                             ORDER BY ptsgm DESC
+                             LIMIT 5;""")
+  
+  t_ppg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, aptsgm 
+                             FROM team 
+                             ORDER BY aptsgm DESC
+                             LIMIT 5;""")
+  
+  t_appg = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, ptsdiff 
+                             FROM team 
+                             ORDER BY ptsdiff DESC
+                             LIMIT 5;""")
+  
+  t_ptsdiff = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, oeff 
+                             FROM team 
+                             ORDER BY oeff DESC
+                             LIMIT 5;""")
+  
+  t_oeff = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, deff 
+                             FROM team 
+                             ORDER BY deff DESC
+                             LIMIT 5;""")
+  
+  t_deff = [(res[0], res[1]) for res in cursor]
+
+  cursor = g.conn.execute("""SELECT team, pace 
+                             FROM team 
+                             ORDER BY pace DESC
+                             LIMIT 5;""")
+  
+  t_pace = [(res[0], res[1]) for res in cursor]
+
+
   cursor.close()
 
-  context = dict(data = names)
+  context = dict(p_ppg = p_ppg,
+                 p_rpg = p_rpg,
+                 p_apg = p_apg,
+                 p_bpg = p_bpg,
+                 p_spg = p_spg,
+                 p_tpg = p_tpg,
+                 t_ppg = t_ppg,
+                 t_appg = t_appg,
+                 t_ptsdiff = t_ptsdiff,
+                 t_oeff = t_oeff,
+                 t_deff = t_deff,
+                 t_pace = t_pace,)
 
   return render_template("index.html", **context)
 
