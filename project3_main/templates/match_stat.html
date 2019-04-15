@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="row">
+	<div class="col-md-3"></div>
+	<div class="col-md-6 text-center">
+		<div class="media">
+			<div class="media-body">
+				<h3 class="">{{tname1}}</h3>
+				<h3> vs </h3>
+				<h3 class="">{{tname2}}</h3>
+			</div>
+
+		</div>
+	</div>
+	<div class="col-md-3 text-center"><br><a href="/matches" class="btn btn-info" role="button">Pick Other Teams</a></div>
+</div>
+
+
+
+<div class="row mt-5">
+	<div class="col-md"></div>
+	<div class="col-md-8 text-center">
+		{% if data1 is not none %}
+		<h4 class="text-left">@ {{tname1}}</h4>
+		<table class="table-striped table-hover table-responsive">
+			<thead>
+				<tr>
+					<th scope="col" style="width: 16.66%; font-size: 25px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 20px;"></th>
+					<th scope="col" style="width: 20px !important; font-size: 25px;"></th>
+					<th scope="col" style="width: 10px;"></th>
+					<th scope="col" style="width: 20px !important; font-size: 20px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;"></th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for date, time, v_name, tpts, hpts, h_name, attend in data1 %}
+				<tr>
+					<td>{{date}} {{time}}</td>
+					<td>{{v_name}}</td>
+					<td>{{tpts}}</td>
+					<td>-</td>
+					<td>{{hpts}}</td>
+					<td>{{h_name}}</td>
+					<td>{{attend}} Attended</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		{% else %}
+			<div>No game information for {{tname1}} home game</div>
+		{% endif %}
+		{% if data2 is not none %}
+		<br/>
+		<h4 class="text-left">@ {{tname2}}</h4>
+		<table class="table-striped table-hover table-responsive">
+			<thead>
+				<tr>
+					<th scope="col" style="width: 16.66%; font-size: 25px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 20px;"></th>
+					<th scope="col" style="width: 20px; font-size: 25px;"></th>
+					<th scope="col" style="width: 10px;"></th>
+					<th scope="col" style="width: 20px; font-size: 20px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;"></th>
+					<th scope="col" style="width: 16.66%; font-size: 25px;"></th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for date, time, v_name, tpts, hpts, h_name, attend in data2 %}
+				<tr>
+					<td>{{date}} {{time}}</td>
+					<td>{{v_name}}</td>
+					<td>{{tpts}}</td>
+					<td>-</td>
+					<td>{{hpts}}</td>
+					<td>{{h_name}}</td>
+					<td>{{attend}} Attended</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+		{% else %}
+			<div>No game information for {{tname2}} home game</div>
+		{% endif %}
+	</div>
+	<div class="col-md"></div>
+</div>
+
+
+{% endblock content %}

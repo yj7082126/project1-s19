@@ -15,7 +15,7 @@ from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 import terms
-from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm, PlayerInfoForm, TeamInfoForm
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm, PlayerInfoForm, TeamInfoForm, MatchForm
 from flask_login import LoginManager, login_user, UserMixin, current_user, logout_user, login_required
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -376,6 +376,64 @@ def comparing_teams():
 
   return render_template("team_comp_request.html", form=form, title="Comparing Teams")
 
+def match_request(tid1, tid2):
+
+  cursor = g.conn.execute("SELECT team FROM team WHERE tid = {};".format(tid1))
+  tname1 = cursor.fetchone()[0]
+  cursor = g.conn.execute("SELECT team FROM team WHERE tid = {};".format(tid2))
+  tname2 = cursor.fetchone()[0]
+
+  res1, res2 = [], []
+  # team 1 as the home team
+  cmd1 = """
+         SELECT match_date, match_time, visitor_name, visitor_pts, home_pts, home_name, attend 
+         FROM match 
+         WHERE home_tid = {htid} AND visitor_tid = {vtid};
+  """
+  cursor = g.conn.execute(cmd1.format(htid=tid1, vtid=tid2))
+
+  if cursor:
+    for res in cursor:
+      res1.append((n for n in res))
+
+  # team 2 as the home team
+  cmd2 = """
+         SELECT match_date, match_time, visitor_name, visitor_pts, home_pts, home_name, attend
+         FROM match 
+         WHERE home_tid = {htid} AND visitor_tid = {vtid};
+  """
+  cursor = g.conn.execute(cmd2.format(htid=tid2, vtid=tid1))
+  if cursor:
+    for res in cursor:
+      res2.append((n for n in res))
+
+  cursor.close()
+
+
+  # debugging 
+  print "inside of function: res1 is {}".format(res1)
+  print "inside of function: res2 is {}".format(res2)
+  
+  if not res1:
+    res1 = None
+  if not res2:
+    res2 = None
+  return tname1, tname2, res1, res2
+
+
+
+@app.route("/matches", methods=['POST', 'GET'])
+def matches():
+  form = MatchForm()
+  if form.validate_on_submit():
+    tid1 = form.team1.data
+    tid2 = form.team2.data
+    print "2"
+    tname1, tname2, data1, data2 = match_request(tid1, tid2)
+
+    return render_template("match_stat.html", data1=data1, data2=data2, tname1 = tname1, tname2 = tname2)
+
+  return render_template("matches.html", form=form)
 
 # =============================================================================
 # Registration and Login
