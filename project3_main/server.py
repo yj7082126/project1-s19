@@ -451,7 +451,7 @@ def register():
     cursor.close()
 
     flash('Account created for {}!'.format(form.username.data), 'success')
-    return redirect("{{url_for('login')}}")
+    return redirect(url_for('login'))
   return render_template('register.html', title='Register', form=form)
 
 @app.route('/login', methods=['POST', 'GET'])
