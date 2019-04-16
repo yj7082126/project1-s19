@@ -15,7 +15,7 @@ from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, url_for, flash
 import terms
-from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm, PlayerInfoForm, TeamInfoForm
+from forms import RegistrationForm, LoginForm, UpdateAccountForm, PlayerCompForm, TeamCompForm, FavPlayerCompForm, FavTeamCompForm, PlayerInfoForm, TeamInfoForm, MatchForm
 from flask_login import LoginManager, login_user, UserMixin, current_user, logout_user, login_required
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
@@ -200,13 +200,14 @@ def player_info_request(pid, attr_show=None):
     attr_show = attr_show_default
 
   cmd = """
-          SELECT {0}, T.team
-          FROM player as P, team as T 
-          WHERE P.tid = T.tid AND P.pid = {1}
-          LIMIT 1;
-          """.format(attr_select_str, pid)
+        SELECT P.pid, P.fullname, P.pos, P.age, P.gp, P.mpg, P.min, P.usg, P.tor, P.fta, P.ft, P.pa2, P.p2, P.pa3, P.p3, P.efg, P.ts, P.ppg, P.rpg, P.trb, P.apg, P.ast, P.spg, P.bpg, P.topg, P.vi, P.ortg, P.drtg, T.team
+        FROM player as P, team as T 
+        WHERE P.tid = T.tid AND P.pid = %s
+        LIMIT 1;
+        """
 
-  cursor = g.conn.execute(cmd)
+  cursor = g.conn.execute(cmd, pid)
+
   result_dict = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
   cursor.close()
 
@@ -251,13 +252,13 @@ def team_info_request(tid, attr_show=None):
     attr_show = attr_show_default
 
   cmd = """
-          SELECT {0} 
+          SELECT tid, team, conf, division, gp, ptsgm, aptsgm, ptsdiff, pace, oeff, deff, ediff, sos, rsos, sar, cons, a4f, w, l, win, ewin, pwin, ach, strk 
           FROM team
-          WHERE tid = {1}
+          WHERE tid = %s
           LIMIT 1;
-          """.format(", ".join(attr_select), tid)
+          """
 
-  cursor = g.conn.execute(cmd)
+  cursor = g.conn.execute(cmd, tid)
   result = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
   cursor.close()
 
@@ -272,7 +273,6 @@ def team_info_request(tid, attr_show=None):
   context = dict(data=data, t_team=t_team, t_conf=t_conf, t_division=t_division, title=title)
   
   return context
-
 
 @app.route('/teams', methods=['POST', 'GET'])
 def team_info():
@@ -297,15 +297,15 @@ def player_comp(pid1, pid2, attr_show=None):
     attr_show = attr_show_default
 
   cmd = """
-        SELECT {attr_select}, T.team
+        SELECT P.pid, P.fullname, P.pos, P.age, P.gp, P.mpg, P.min, P.usg, P.tor, P.fta, P.ft, P.pa2, P.p2, P.pa3, P.p3, P.efg, P.ts, P.ppg, P.rpg, P.trb, P.apg, P.ast, P.spg, P.bpg, P.topg, P.vi, P.ortg, P.drtg, T.team
         FROM player as P, team as T 
-        WHERE P.tid = T.tid AND P.pid = {pid}
+        WHERE P.tid = T.tid AND P.pid = %s
         LIMIT 1;
         """
   
-  cursor = g.conn.execute(cmd.format(attr_select=attr_select_str, pid=pid1))
+  cursor = g.conn.execute(cmd, pid1)
   result_dict1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
-  cursor = g.conn.execute(cmd.format(attr_select=attr_select_str, pid=pid2))
+  cursor = g.conn.execute(cmd, pid2)
   result_dict2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
   cursor.close()
 
@@ -341,16 +341,16 @@ def team_comp(tid1, tid2, attr_show=None):
     attr_show = attr_show_default
 
   cmd = """
-        SELECT {0} 
+        SELECT tid, team, conf, division, gp, ptsgm, aptsgm, ptsdiff, pace, oeff, deff, ediff, sos, rsos, sar, cons, a4f, w, l, win, ewin, pwin, ach, strk 
         FROM team
-        WHERE tid = {1}
+        WHERE tid = %s
         LIMIT 1;
         """
-  cursor = g.conn.execute(cmd.format(attr_select_str, tid1))
+  cursor = g.conn.execute(cmd, tid1)
 
   result1 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
 
-  cursor = g.conn.execute(cmd.format(attr_select_str, tid2))
+  cursor = g.conn.execute(cmd, tid2)
 
   result2 = {attr: data for attr, data in zip(attr_select, cursor.fetchone())}
   cursor.close()
@@ -376,6 +376,54 @@ def comparing_teams():
 
   return render_template("team_comp_request.html", form=form, title="Comparing Teams")
 
+def match_request(tid1, tid2):
+
+  cursor = g.conn.execute("SELECT team FROM team WHERE tid = %s;", tid1)
+  tname1 = cursor.fetchone()[0]
+  cursor = g.conn.execute("SELECT team FROM team WHERE tid = %s;", tid2)
+  tname2 = cursor.fetchone()[0]
+
+  res1, res2 = [], []
+  # team 1 as the home team
+  cmd = """
+         SELECT match_date, match_time, visitor_name, visitor_pts, home_pts, home_name, attend 
+         FROM match 
+         WHERE home_tid = %s AND visitor_tid = %s;
+  """
+  cursor = g.conn.execute(cmd, (tid1, tid2))
+
+  if cursor:
+    for res in cursor:
+      res1.append((n for n in res))
+
+  # team 2 as the home team
+  
+  cursor = g.conn.execute(cmd, (tid2, tid1))
+  if cursor:
+    for res in cursor:
+      res2.append((n for n in res))
+
+  cursor.close()
+  
+  if not res1:
+    res1 = None
+  if not res2:
+    res2 = None
+  return tname1, tname2, res1, res2
+
+
+@app.route("/matches", methods=['POST', 'GET'])
+def matches():
+  form = MatchForm()
+  if form.validate_on_submit():
+    tid1 = form.team1.data
+    tid2 = form.team2.data
+    print "2"
+    tname1, tname2, data1, data2 = match_request(tid1, tid2)
+
+    return render_template("match_stat.html", data1=data1, data2=data2, tname1 = tname1, tname2 = tname2)
+
+  return render_template("matches.html", form=form)
 
 # =============================================================================
 # Registration and Login
@@ -386,7 +434,7 @@ def load_user(user_id):
   '''1. fetch user information through query the database
      2. return a User object with user data '''
 
-  cursor = g.conn.execute("SELECT uid, username, password, tid, pid FROM users WHERE uid = {};".format(user_id))
+  cursor = g.conn.execute("SELECT uid, username, password, tid, pid FROM users WHERE uid = %s;", user_id)
   result = cursor.fetchone()
 
   return User(result[0], result[1], result[2], result[3], result[4])
@@ -409,9 +457,9 @@ class User(UserMixin):
   def get_fav_team(self):
 
     cmd = """
-          SELECT team FROM team WHERE tid = {};
-    """.format(self.tid)
-    cursor = g.conn.execute(cmd)
+          SELECT team FROM team WHERE tid = %s;
+    """
+    cursor = g.conn.execute(cmd, self.tid)
     res = cursor.fetchone()
     cursor.close()
     if res:
@@ -422,9 +470,9 @@ class User(UserMixin):
   def get_fav_player(self):
 
     cmd = """
-          SELECT fullname FROM player WHERE pid = {};
-    """.format(self.pid)
-    cursor = g.conn.execute(cmd)
+          SELECT fullname FROM player WHERE pid = %s;
+    """
+    cursor = g.conn.execute(cmd, self.pid)
     res = cursor.fetchone()
     cursor.close()
     print res
@@ -447,7 +495,9 @@ def register():
 
     cursor = g.conn.execute("SELECT MAX(uid) FROM users;")
     uid = cursor.fetchone()[0] + 1
-    cursor = g.conn.execute("INSERT INTO users VALUES ({}, '{}', '{}', {}, {});".format(uid, username, password, tid, pid))
+
+    cursor = g.conn.execute("INSERT INTO users VALUES (%s, %s, %s, %s, %s);", (uid, username, password, tid, pid))
+
     cursor.close()
 
     flash('Account created for {}!'.format(form.username.data), 'success')
@@ -462,10 +512,10 @@ def login():
     cmd = """
           SELECT uid, username, password, tid, pid
           FROM users
-          WHERE username = '{}';
-          """.format(form.username.data)
+          WHERE username = %s;
+          """
 
-    cursor = g.conn.execute(cmd)
+    cursor = g.conn.execute(cmd, form.username.data)
     result = cursor.fetchone()
     cursor.close()
 
@@ -496,14 +546,12 @@ def account():
 
     cmd = """
           UPDATE users
-          SET username = '{username}', tid = {tid}, pid = {pid}
-          WHERE uid = {uid};
-    """.format(username = new_username,
-              tid = new_tid,
-              pid = new_pid,
-              uid = current_user.id)
+          SET username = %s, tid = %s, pid = %s
+          WHERE uid = %s;
+    """
     
-    cursor = g.conn.execute(cmd)
+    cursor = g.conn.execute(cmd, (new_username, 
+                                  new_tid, new_pid, current_user.id))
     cursor.close()
 
     flash('your account has been updated!', 'success')

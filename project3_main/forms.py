@@ -31,7 +31,7 @@ class RegistrationForm(FlaskForm):
 
 	def validate_username(self, username):
 
-		cursor = g.conn.execute("SELECT uid FROM users WHERE username = '{}'".format(username.data))
+		cursor = g.conn.execute("SELECT uid FROM users WHERE username = %s", username.data)
 		result = cursor.fetchone()
 		if result:
 			raise ValidationError('That username is taken. Please choose a different one.')
@@ -63,7 +63,7 @@ class UpdateAccountForm(FlaskForm):
 	def validate_username(self, username):
 		if username.data != current_user.username:
 
-			cursor = g.conn.execute("SELECT uid FROM users WHERE username = '{}'".format(username.data))
+			cursor = g.conn.execute("SELECT uid FROM users WHERE username = %s", username.data)
 			result = cursor.fetchone()
 			if result:
 				raise ValidationError('That username is taken. Please choose a different one.')
@@ -107,3 +107,9 @@ class FavTeamCompForm(FlaskForm):
 	submit = SubmitField('Compare!')
 		
 
+class MatchForm(FlaskForm):
+
+	team1 = SelectField('First Team', choices=team_choices, coerce=int)
+	team2 = SelectField('Second Team', choices=team_choices, coerce=int)
+
+	submit = SubmitField('Search!')
